@@ -16,3 +16,5 @@ clojure/target/
 session
 groovy/.idea/
 groovy/.gradle/
+typescript/node_modules/
+typescript/dist/

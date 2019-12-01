@@ -1,0 +1,11 @@
+{
+	"diff": true,
+	"extension": ["spec.ts"],
+	"package": "./package.json",
+	"recursive": true,
+	"reporter": "spec",
+	"slow": 75,
+	"timeout": 2000,
+	"ui": "bdd",
+	"spec": "./dist/y2019/*.js"
+}
