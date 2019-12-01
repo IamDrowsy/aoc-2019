@@ -18,7 +18,6 @@ class Day01 {
         Integer additional = neededFuel(weight);
         while (additional > 0) {
             needed += additional;
-            println(additional + ':' + needed);
             additional = neededFuel(additional);
         }
         return needed;
