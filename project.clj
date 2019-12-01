@@ -7,4 +7,5 @@
                  [criterium "0.4.5"]
                  [datascript "0.18.7"]
                  [generateme/fastmath "1.5.0-alpha1"]
-                 [com.rpl/specter "1.1.3"]])
+                 [com.rpl/specter "1.1.3"]
+                 [clj-http "3.10.0"]])
