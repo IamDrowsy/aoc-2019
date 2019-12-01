@@ -1,6 +1,6 @@
 (ns advent-of-code.y2019.d01
   (:require [clojure.string :as str]
-            [advent-of-code.util :refer [parse-long get-input]]
+            [advent-of-code.util :refer [parse-long get-input check]]
             [criterium.core :refer [quick-bench]]))
 
 (defn fuel-requirement [weight]
@@ -25,5 +25,5 @@
              (str/split-lines (get-input 1))))
 
 (defn run []
-  (assert (= 3361976 (solve-1)))
-  (assert (= 5040085 (solve-2))))
+  (check 1 1 (solve-1))
+  (check 1 2 (solve-2)))
