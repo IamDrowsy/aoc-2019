@@ -28,7 +28,7 @@ class Day01 {
     }
 
     static void main(String[] args) {
-        Util.check(day, 1, solve1(Util.input(day)));
+        Util.check(day,1,solve1(Util.input(day)));
         Util.check(day,2,solve2(Util.input(day)));
     }
 }
