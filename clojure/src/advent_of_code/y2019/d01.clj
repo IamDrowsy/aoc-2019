@@ -3,10 +3,12 @@
             [advent-of-code.util :refer [parse-long get-input check]]
             [criterium.core :refer [quick-bench]]))
 
+(def day 1)
+
 (defn fuel-requirement [weight]
   (- (quot weight 3) 2))
 
-(defn solve-1 []
+(defn solve-1 [input]
   (transduce (comp (map parse-long)
                    (map fuel-requirement))
              +
@@ -18,12 +20,12 @@
              +
              (iterate fuel-requirement weight)))
 
-(defn solve-2 []
+(defn solve-2 [input]
   (transduce (comp (map parse-long)
                    (map total-fuel-requirement))
              +
-             (str/split-lines (get-input 1))))
+             (str/split-lines input)))
 
 (defn run []
-  (check 1 1 (solve-1))
-  (check 1 2 (solve-2)))
+  (check day 1 (solve-1 (get-input day)))
+  (check day 2 (solve-2 (get-input day))))
