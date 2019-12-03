@@ -19,15 +19,27 @@
                         "D" (map #(vector curr-x %) (range curr-y (- curr-y dist) -1))))))
 
 (defn wire-points [wire-string]
-  (into #{} (reduce extend-wire '([0 0]) (str/split wire-string #","))))
+  (reduce extend-wire '([0 0]) (str/split wire-string #",")))
 
 (defn dist-to-zero [[^long x ^long y]]
   (+ (Math/abs x) (Math/abs y)))
 
-(defn solve-1 [input]
-  (dist-to-zero (second (sort-by dist-to-zero (apply set/intersection (map wire-points (str/split-lines input)))))))
+(defn key-set [m]
+  (set (keys m)))
 
-(defn solve-2 [input])
+(defn solve-1 [input]
+  (dist-to-zero (second (sort-by dist-to-zero (apply set/intersection (map #(set (wire-points %)) (str/split-lines input)))))))
+
+(defn wire-map [wire-string]
+  (let [wp (wire-points wire-string)]
+    (zipmap wp (range (dec (count wp)) -1 -1))))
+
+(defn solve-2 [input]
+  (let [wire-strings (str/split-lines input)
+        [wire1 wire2] (mapv wire-map wire-strings)
+        dist-sum (fn [point] (+ (wire1 point) (wire2 point)))
+        nearest-point (second (sort-by dist-sum (set/intersection (key-set wire1) (key-set wire2))))]
+    (- (dist-sum nearest-point) 2)))
 
 
 (defn run []
