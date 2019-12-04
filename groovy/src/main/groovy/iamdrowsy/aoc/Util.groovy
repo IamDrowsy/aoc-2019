@@ -13,5 +13,6 @@ class Util {
         String fileName = String.format('../data/d%02d-part-%d.txt', day, part);
         String expected = new File(fileName).text;
         assert expected == solution
+        println("Got correct solution for day ${day} part ${part}: ${solution}");
     }
 }
