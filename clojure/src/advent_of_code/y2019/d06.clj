@@ -26,38 +26,42 @@
   (db/execute (db/get-session db)
               (input->query input)))
 
+(defmacro with-filled-db [input run-fun]
+  `(let [db# (db/create-in-memory-connection)
+         _# (fill-db db# ~input)
+         result# (~run-fun db#)]
+     ((:destroy-fn db#))
+     result#))
+
 (db/defquery all-nodes "MATCH (x) return x")
 (db/defquery relation-count "MATCH (x {name: $name}) -[*]->(y) return count(y)")
 
 (defn solve-1 [input]
-  (let [db (db/create-in-memory-connection)]
-    (fill-db db input)
-    (println "filled db")
-    (let [all (map :x
-                   (with-open [session (db/get-session db)]
-                     (all-nodes session)))
-          result
-          (with-open [session (db/get-session db)]
-            (reduce (fn [sum name]
-                      (+ sum (first (vals (first (relation-count session name))))))
-                    0
-                    all))]
-      ((:destroy-fn db))
-      result)))
+  (with-filled-db input
+                  (fn [db]
+                    (let [all (map :x
+                                   (with-open [session (db/get-session db)]
+                                     (all-nodes session)))
+                          result
+                          (with-open [session (db/get-session db)]
+                            (reduce (fn [sum name]
+                                      (+ sum (first (vals (first (relation-count session name))))))
+                                    0
+                                    all))]
+                      result))))
 
-(defn run-2 []
+(defn run-2 [db]
   (with-open [session (db/get-session db)]
-    (db/execute session
-                "MATCH (start:Loc{name:'SAN'}), (end:Loc{name:'YOU'})
-                 CALL algo.shortestPath.stream(start, end, 'cost')
-                 YIELD nodeId, cost
-                 RETURN algo.asNode(nodeId).name AS name, cost")))
+    (-> (db/execute session
+                    "MATCH (start {name:'SAN'}),(end {name:'YOU'}), p = shortestPath((start)-[*]-(end))
+                     RETURN p")
+        first
+        :p
+        (#(- (.size %) 2)))))
 
 (defn solve-2 [input]
-  (let [db (db/create-in-memory-connection)]
-    (fill-db db input)
-    (println "filled db")
-    (with-open [session (db/get-session db)])))
+  (with-filled-db input
+                  run-2))
 
 
 (defn run []
