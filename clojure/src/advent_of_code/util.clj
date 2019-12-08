@@ -26,4 +26,9 @@
       (assert (= (slurp solution-file) (str solution)))
       (spit solution-file solution))))
 
+(defn fixed-point [f x]
+  "Calculates the fixed point of f with respect to x."
+  (reduce #(if (= %1 %2) (reduced %1) %2)
+          (iterate f x)))
+
 (def get-input (memoize get-input*))

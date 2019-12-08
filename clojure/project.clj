@@ -8,4 +8,5 @@
                  [datascript "0.18.7"]
                  [generateme/fastmath "1.5.0-alpha1"]
                  [com.rpl/specter "1.1.3"]
-                 [clj-http "3.10.0"]])
+                 [clj-http "3.10.0"]
+                 [gorillalabs/neo4j-clj "2.0.1"]])
