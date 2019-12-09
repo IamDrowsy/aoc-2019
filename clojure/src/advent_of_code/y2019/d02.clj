@@ -1,41 +1,24 @@
 (ns advent-of-code.y2019.d02
   (:require [clojure.string :as str]
+            [advent-of-code.y2019.intcode :as i]
           [advent-of-code.util :refer [parse-long get-input check]]))
 
 (def day 2)
 
-(defn parse-programm [input]
-  (assoc (zipmap (range) (mapv parse-long (str/split input #",")))
-    :current 0))
-
-(defn step [programm]
-  (let [current (:current programm)
-        op-code (programm current)]
-    (case op-code
-      1 (assoc programm (programm (+ current 3))
-                        (+ (programm (programm (+ current 1)))
-                           (programm (programm (+ current 2))))
-                        :current (+ current 4))
-      2 (assoc programm (programm (+ current 3))
-                        (* (programm (programm (+ current 1)))
-                           (programm (programm (+ current 2))))
-                        :current (+ current 4))
-      99 (assoc programm
-           :current :done
-           :result (programm 0)))))
-
-(defn run-programm [programm [noun verb]]
-  (->> programm
-     (#(assoc % 1 noun 2 verb :noun noun :verb verb))
-     (iterate step)
-     (drop-while #(not= (:current %) :done))
-     (first)))
+(defn run-programm [intcode [noun verb]]
+  {:result (-> intcode
+               (i/set-absolute 1 noun)
+               (i/set-absolute 2 verb)
+               (i/run)
+               (i/get-absolute 0))
+   :verb verb
+   :noun noun})
 
 (defn solve-1 [input]
-  (:result (run-programm (parse-programm input) [12 2])))
+  (:result (run-programm (i/init-intcode [] [] input) [12 2])))
 
 (defn solve-2 [input]
-  (let [programm (parse-programm input)
+  (let [programm (i/init-intcode [] [] input)
         result (->> (for [noun (range 100)
                           verb (range 100)]
                       [noun verb])

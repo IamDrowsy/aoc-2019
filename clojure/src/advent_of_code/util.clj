@@ -32,3 +32,8 @@
           (iterate f x)))
 
 (def get-input (memoize get-input*))
+
+(defn digits [^long n]
+  (if (< n 10)
+    [n]
+    (conj (digits (quot n 10)) (rem n 10))))
