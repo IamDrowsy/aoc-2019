@@ -10,8 +10,8 @@
 
 (defn new-direction [old-direction turn-instruction]
   (case turn-instruction
-    0 (mod (inc old-direction) 4)
-    1 (mod (dec old-direction) 4)))
+    0 (mod (dec old-direction) 4)
+    1 (mod (inc old-direction) 4)))
 
 (defn new-pos [[old-x old-y] direction]
   (case direction

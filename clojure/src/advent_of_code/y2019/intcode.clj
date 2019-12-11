@@ -80,10 +80,12 @@
   (set-immediate intcode (get-immediate intcode index) val))
 
 (defn get-relative [intcode index]
-  (get-immediate intcode (+ index (:relative-base intcode))))
+  (get-immediate intcode (+ (get-immediate intcode index)
+                            (get-relative-base intcode))))
 
 (defn set-relative [intcode index val]
-  (set-immediate intcode (+ index (:relative-base intcode)) val))
+  (set-immediate intcode (+ (get-immediate intcode index)
+                            (get-relative-base intcode)) val))
 
 ;fn should be incode, getter/setter fn, which should be fns of intcode itself
 (def commands
@@ -126,17 +128,17 @@
   (let [mode ((:argmodes full-command) index)]
     (case [mode get-or-set]
       [\0 :get] #(get-position % (+ (inc index) (get-pointer %)))
-      [\0 :set] #(set-position %1 (+ (inc index) (get-pointer %)) %2)
+      [\0 :set] #(set-position %1 (+ (inc index) (get-pointer %1)) %2)
       [\1 :get] #(get-immediate % (+ (inc index) (get-pointer %)))
-      [\1 :set] #(set-immediate %1 (+ (inc index) (get-pointer %)) %2)
-      [\2 :get] #(get-relative %1 (+ (inc index) (get-pointer %)))
-      [\2 :set] #(set-relative %1 (+ (inc index) (get-pointer %)) %2))))
+      [\1 :set] #(set-immediate %1 (+ (inc index) (get-pointer %1)) %2)
+      [\2 :get] #(get-relative % (+ (inc index) (get-pointer %)))
+      [\2 :set] #(set-relative %1 (+ (inc index) (get-pointer %1)) %2))))
 
 (defn opcode->fn* [opcode]
   (let [full-opcode (parse-opcode opcode)
         arg-fns (map-indexed #(partial (resolve-arg-mode full-opcode %1 %2)) (:args full-opcode))]
       (fn [intcode]
-        #_(println "Opcode" opcode)
+        #_(println opcode)
         (-> ((:fn full-opcode) intcode arg-fns)
             (inc-pointer (inc (count arg-fns)))))))
 

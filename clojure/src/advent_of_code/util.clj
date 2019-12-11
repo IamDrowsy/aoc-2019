@@ -39,10 +39,10 @@
         min-y (first (sort (map second (keys m))))
         max-y (last (sort (map second (keys m))))]
     (->>
-      (for [x (range min-x max-x)
-            y (range min-y max-y)]
-        (char-mapping (m [x y])))
-      (partition (- max-x min-x))
+      (for [x (range max-x (dec min-x) -1)
+            y (range min-y (inc max-y))]
+        (or (char-mapping (m [x y])) " "))
+      (partition (inc (- max-y min-y)))
       (mapv #(str/join %))
       (str/join "\n"))))
 
