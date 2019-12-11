@@ -9,4 +9,7 @@
                  [generateme/fastmath "1.5.0-alpha1"]
                  [com.rpl/specter "1.1.3"]
                  [clj-http "3.10.0"]
-                 [gorillalabs/neo4j-clj "2.0.1"]])
+                 [org.clojure/core.async "0.6.532"]
+                 [gorillalabs/neo4j-clj "2.0.1"]
+                 [org.clojure/math.combinatorics "0.1.6"]
+                 [org.clojure/core.async "0.6.532"]])

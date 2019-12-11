@@ -15,10 +15,10 @@
    :noun noun})
 
 (defn solve-1 [input]
-  (:result (run-programm (i/init-intcode [] [] input) [12 2])))
+  (:result (run-programm (i/init-intcode [] input) [12 2])))
 
 (defn solve-2 [input]
-  (let [programm (i/init-intcode [] [] input)
+  (let [programm (i/init-intcode [] input)
         result (->> (for [noun (range 100)
                           verb (range 100)]
                       [noun verb])
