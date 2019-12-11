@@ -7,12 +7,12 @@
 
 (defn run-programm [intcode [noun verb]]
   {:result (-> intcode
-               (i/set-absolute 1 noun)
-               (i/set-absolute 2 verb)
+               (i/set-immediate 1 noun)
+               (i/set-immediate 2 verb)
                (i/run)
-               (i/get-absolute 0))
-   :verb verb
-   :noun noun})
+               (i/get-immediate 0))
+   :verb   verb
+   :noun   noun})
 
 (defn solve-1 [input]
   (:result (run-programm (i/init-intcode [] input) [12 2])))

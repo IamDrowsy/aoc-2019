@@ -5,10 +5,12 @@
   (:import (clojure.lang IPersistentMap)))
 
 (defprotocol IntcodeMemory
-  (get-absolute [this idx])
-  (set-absolute [this idx val])
+  (get-immediate [this idx])
+  (set-immediate [this idx val])
   (get-pointer [this])
-  (set-pointer [this newtval]))
+  (set-pointer [this newtval])
+  (get-relative-base [this])
+  (set-relative-base [this new-val]))
 
 (defprotocol IntcodeIO
   (read-input! [this])
@@ -18,6 +20,7 @@
 
 (defn init-intcode [input memory-string]
   {:io     {:input (to-chan input) :output (chan 20)}
+   :relative-base 0
    :memory (zipmap (range) (map u/parse-long (str/split memory-string #",")))
    :pointer 0})
 
@@ -34,10 +37,10 @@
 
 (extend-type IPersistentMap
   IntcodeMemory
-  (get-absolute [this idx]
+  (get-immediate [this idx]
     #_(println "Get" idx "=" (get-in this [:memory idx]))
-    (get-in this [:memory idx]))
-  (set-absolute [this idx val]
+    (get-in this [:memory idx] 0))
+  (set-immediate [this idx val]
     #_(println "Set" idx "to" val)
     (assoc-in this [:memory idx] val))
   (get-pointer [this]
@@ -45,6 +48,10 @@
   (set-pointer [this val]
     #_(println "Set Pointer to " val)
     (assoc this :pointer val))
+  (get-relative-base [this]
+    (get this :relative-base))
+  (set-relative-base [this val]
+    (assoc this :relative-base val))
   IntcodeIO
   (read-input! [this]
     #_(println "Read Input")
@@ -62,11 +69,21 @@
 (defn inc-pointer [intcode inc-count]
   (set-pointer intcode (+ (get-pointer intcode) inc-count)))
 
+(defn adjust-relative-base [intcode val]
+  (set-relative-base intcode (+ (get-relative-base intcode)
+                                val)))
+
+(defn get-position [intcode index]
+  (get-immediate intcode (get-immediate intcode index)))
+
+(defn set-position [intcode index val]
+  (set-immediate intcode (get-immediate intcode index) val))
+
 (defn get-relative [intcode index]
-  (get-absolute intcode (get-absolute intcode index)))
+  (get-immediate intcode (+ index (:relative-base intcode))))
 
 (defn set-relative [intcode index val]
-  (set-absolute intcode (get-absolute intcode index) val))
+  (set-immediate intcode (+ index (:relative-base intcode)) val))
 
 ;fn should be incode, getter/setter fn, which should be fns of intcode itself
 (def commands
@@ -92,6 +109,9 @@
    8  {:args [:get :get :set]
        :fn   (fn [i [g1 g2 s1]]
                (s1 i (if (= (g1 i) (g2 i)) 1 0)))}
+   9  {:args [:get]
+       :fn (fn [i [g1]]
+             (adjust-relative-base i (g1 i)))}
    99 {:args [] :fn (fn [i _] (set-pointer i -2))}})
 
 (defn parse-opcode [opcode]
@@ -105,10 +125,12 @@
 (defn resolve-arg-mode [full-command index get-or-set]
   (let [mode ((:argmodes full-command) index)]
     (case [mode get-or-set]
-      [\0 :get] #(get-relative % (+ (inc index) (get-pointer %)))
-      [\0 :set] #(set-relative %1 (+ (inc index) (get-pointer %)) %2)
-      [\1 :get] #(get-absolute % (+ (inc index) (get-pointer %)))
-      [\1 :set] #(set-absolute %1 (+ (inc index) (get-pointer %)) %2))))
+      [\0 :get] #(get-position % (+ (inc index) (get-pointer %)))
+      [\0 :set] #(set-position %1 (+ (inc index) (get-pointer %)) %2)
+      [\1 :get] #(get-immediate % (+ (inc index) (get-pointer %)))
+      [\1 :set] #(set-immediate %1 (+ (inc index) (get-pointer %)) %2)
+      [\2 :get] #(get-relative %1 (+ (inc index) (get-pointer %)))
+      [\2 :set] #(set-relative %1 (+ (inc index) (get-pointer %)) %2))))
 
 (defn opcode->fn* [opcode]
   (let [full-opcode (parse-opcode opcode)
@@ -121,7 +143,7 @@
 (def opcode->fn (memoize opcode->fn*))
 
 (defn step [intcode]
-  ((opcode->fn* (get-absolute intcode (get-pointer intcode))) intcode))
+  ((opcode->fn* (get-immediate intcode (get-pointer intcode))) intcode))
 
 (defn run [intcode]
     (first (drop-while #(not= -1 (get-pointer %))
@@ -131,17 +153,20 @@
   ([intcode-memory input]
    (start intcode-memory input (chan 20)))
   ([intcode-memory input out-chan]
-   (thread
-     (loop [intcode {:io      {:input  (if (coll? input)
-                                         (to-chan input)
-                                         ;probably a chan
-                                         input)
-                               :output out-chan}
-                     :memory  intcode-memory
-                     :pointer 0}]
-       (if (= -1 (get-pointer intcode))
-         (get-output intcode)
-         (recur (step intcode)))))))
+   (let [in-chan (if (coll? input) (to-chan input) input)]
+     (thread
+       (try
+         (loop [intcode {:io      {:input  in-chan
+                                   :output out-chan}
+                         :memory  intcode-memory
+                         :relative-base 0
+                         :pointer 0}]
+           (if (= -1 (get-pointer intcode))
+             (get-output intcode)
+             (recur (step intcode))))
+         (catch Exception e
+           (close! in-chan) (close! out-chan)
+           (throw e)))))))
 
 
 

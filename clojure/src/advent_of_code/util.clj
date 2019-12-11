@@ -33,6 +33,19 @@
 
 (def get-input (memoize get-input*))
 
+(defn draw-grid [char-mapping m]
+  (let [min-x (first (sort (map first (keys m))))
+        max-x (last (sort (map first (keys m))))
+        min-y (first (sort (map second (keys m))))
+        max-y (last (sort (map second (keys m))))]
+    (->>
+      (for [x (range min-x max-x)
+            y (range min-y max-y)]
+        (char-mapping (m [x y])))
+      (partition (- max-x min-x))
+      (mapv #(str/join %))
+      (str/join "\n"))))
+
 (defn digits [^long n]
   (if (< n 10)
     [n]
