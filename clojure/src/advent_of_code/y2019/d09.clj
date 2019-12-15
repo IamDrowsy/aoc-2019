@@ -9,10 +9,10 @@
 (def day 9)
 
 (defn solve-1 [input]
-  (first (<!! (i/start (i/parse-intcode input) [1]))))
+  (first (i/drain (i/start (i/parse-intcode input) [1]))))
 
 (defn solve-2 [input]
-  (first (<!! (i/start (i/parse-intcode input) [2]))))
+  (first (i/drain (i/start (i/parse-intcode input) [2]))))
 
 (defn run []
   (check day 1 (solve-1 (get-input day)))

@@ -10,7 +10,7 @@
 (def day 7)
 
 (defn run-phase [start-intcode phase-setting input]
-  (first (<!! (i/start start-intcode [phase-setting input]))))
+  (first (i/drain (i/start start-intcode [phase-setting input]))))
 
 (defn run-full-cycle [start-intcode phase-settings]
   (reduce #(run-phase start-intcode %2 %1)

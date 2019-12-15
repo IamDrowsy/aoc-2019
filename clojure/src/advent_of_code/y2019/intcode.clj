@@ -2,7 +2,7 @@
   (:require [advent-of-code.util :as u]
             [clojure.string :as str]
             [clojure.core.async :as a :refer [<! >! >!! <!! put! take! chan to-chan close! go go-loop thread]])
-  (:import (clojure.lang IPersistentMap)))
+  (:import (clojure.lang IPersistentMap Atom)))
 
 (defprotocol IntcodeMemory
   (get-immediate [this idx])
@@ -15,8 +15,7 @@
 (defprotocol IntcodeIO
   (read-input! [this])
   (write-output [this val])
-  (set-input [this vals])
-  (get-output [this]))
+  (set-input [this vals]))
 
 (defn init-intcode [input memory-string]
   {:io     {:input (to-chan input) :output (chan 20)}
@@ -34,11 +33,10 @@
 (defn drain-until-closed [chan]
   (into [] (take-while identity (repeatedly #(<!! chan)))))
 
-
 (extend-type IPersistentMap
   IntcodeMemory
   (get-immediate [this idx]
-    #_(println "Get" idx "=" (get-in this [:memory idx]))
+    #_(println "Get" idx "=" (get-in this [:memory idx] 0))
     (get-in this [:memory idx] 0))
   (set-immediate [this idx val]
     #_(println "Set" idx "to" val)
@@ -62,9 +60,7 @@
     this)
   (set-input [this vals]
     (assoc-in this [:io :input]
-              (if (coll? vals) (to-chan vals) vals)))
-  (get-output [this]
-    (close-and-drain (get-in this [:io :output]))))
+              (if (coll? vals) (to-chan vals) vals))))
 
 (defn inc-pointer [intcode inc-count]
   (set-pointer intcode (+ (get-pointer intcode) inc-count)))
@@ -94,7 +90,10 @@
    2  {:args [:get :get :set]
        :fn   (fn [i [g1 g2 s1]] (s1 i (* (g1 i) (g2 i))))}
    3  {:args [:set]
-       :fn   (fn [i [s]] (s i (read-input! i)))}
+       :fn   (fn [i [s]] (let [input (read-input! i)]
+                           (if (nil? input)
+                             (set-pointer i -3)
+                             (s i input))))}
    4  {:args [:get]
        :fn   (fn [i [g]] (write-output i (g i)))}
    5  {:args [:get :get]
@@ -112,8 +111,8 @@
        :fn   (fn [i [g1 g2 s1]]
                (s1 i (if (= (g1 i) (g2 i)) 1 0)))}
    9  {:args [:get]
-       :fn (fn [i [g1]]
-             (adjust-relative-base i (g1 i)))}
+       :fn   (fn [i [g1]]
+               (adjust-relative-base i (g1 i)))}
    99 {:args [] :fn (fn [i _] (set-pointer i -2))}})
 
 (defn parse-opcode [opcode]
@@ -145,30 +144,53 @@
 (def opcode->fn (memoize opcode->fn*))
 
 (defn step [intcode]
-  ((opcode->fn* (get-immediate intcode (get-pointer intcode))) intcode))
+  ((opcode->fn (get-immediate intcode (get-pointer intcode))) intcode))
 
 (defn run [intcode]
     (first (drop-while #(not= -1 (get-pointer %))
                        (iterate step intcode))))
 
-(defn start
-  ([intcode-memory input]
-   (start intcode-memory input (chan 20)))
-  ([intcode-memory input out-chan]
-   (let [in-chan (if (coll? input) (to-chan input) input)]
+(defn resume
+  ([intcode]
+   (resume intcode (chan 20) (chan 20)))
+  ([intcode input]
+   (resume intcode input (chan 20)))
+  ([intcode input out-chan]
+   (let [in-chan (if (coll? input) (to-chan input) input)
+         state (atom (merge intcode {:io {:input  in-chan
+                                          :output out-chan}}))]
      (thread
        (try
-         (loop [intcode {:io      {:input  in-chan
-                                   :output out-chan}
-                         :memory  intcode-memory
-                         :relative-base 0
-                         :pointer 0}]
+         (loop [intcode @state]
+           (reset! state intcode)
            (if (= -1 (get-pointer intcode))
-             (get-output intcode)
+             (do (close! out-chan) (close! in-chan))
              (recur (step intcode))))
          (catch Exception e
            (close! in-chan) (close! out-chan)
-           (throw e)))))))
+           (throw e))))
+     state)))
 
+(defn start
+  ([intcode-memory]
+   (start intcode-memory (chan 20) (chan 20)))
+  ([intcode-memory input]
+   (start intcode-memory input (chan 20)))
+  ([intcode-memory input out-chan]
+   (resume {:memory  intcode-memory
+            :relative-base 0
+            :pointer 0} input out-chan)))
 
+(defn next-output! [started-intcode]
+  (<!! (get-in @started-intcode [:io :output])))
+
+(defn drain [started-intcode]
+  (drain-until-closed (get-in @started-intcode [:io :output])))
+
+(defn stop-and-drain [started-intcode]
+  (close! (get-in @started-intcode [:io :input]))
+  (drain started-intcode))
+
+(defn input! [started-intcode val]
+  (>!! (get-in @started-intcode [:io :input]) val))
 

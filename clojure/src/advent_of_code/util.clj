@@ -1,6 +1,7 @@
 (ns advent-of-code.util
   (:require [clj-http.client :as client]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.core.async :as a])
   (:import (java.io File)))
 
 (defn parse-long [s]
@@ -30,6 +31,33 @@
   "Calculates the fixed point of f with respect to x."
   (reduce #(if (= %1 %2) (reduced %1) %2)
           (iterate f x)))
+
+(defn between [i1 i2]
+  (+ i1 (quot (- i2 i1) 2)))
+
+(defn- binary-search* [f target-fn highest-false-index lowest-true-index this-index]
+  (loop [hfi highest-false-index lti lowest-true-index  i this-index]
+    (let [result (target-fn (f i))]
+      (cond
+        ;linear search case
+        (and lti hfi (> 10 (- lti hfi))) (first (drop-while #(not (target-fn (f %))) (range hfi (inc lti))))
+        (and (not result) (nil? lti)) (recur i lti (* 2 i))
+        (and result (nil? hfi)) (recur hfi i (quot i 2))
+        (not result) (recur i lti (between i lti))
+        result (recur hfi i (between hfi i))))))
+
+(defn binary-search
+  "Finds the first index for that (target-fn (f index)) is true. Binary searches with the index"
+  ([f target-fn]
+   (binary-search f target-fn 1))
+  ([f target-fn start-index]
+   (binary-search* f target-fn nil nil start-index)))
+
+(defn watch-channel [out-chan]
+  (a/thread
+    (loop [val (a/<!! out-chan)]
+      (when val
+        (println val) (recur (a/<!! out-chan))))))
 
 (def get-input (memoize get-input*))
 
