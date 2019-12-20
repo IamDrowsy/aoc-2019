@@ -4,7 +4,6 @@
     [criterium.core :refer [quick-bench]]
     [medley.core :refer [find-first]]
     [advent-of-code.y2019.intcode :as i]
-    [advent-of-code.grid :as g]
     [advent-of-code.util :as u]))
 
 (def day 19)
