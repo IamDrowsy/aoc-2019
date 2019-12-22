@@ -1,7 +1,8 @@
 (ns advent-of-code.util
   (:require [clj-http.client :as client]
             [clojure.string :as str]
-            [clojure.core.async :as a])
+            [clojure.core.async :as a]
+            [medley.core :as m])
   (:import (java.io File)))
 
 (defn parse-long [s]
@@ -31,6 +32,39 @@
   "Calculates the fixed point of f with respect to x."
   (reduce #(if (= %1 %2) (reduced %1) %2)
           (iterate f x)))
+
+(defn first-repetition [f x]
+  "Finds the index of (iterate f x) where f^i(x) = x"
+  (first (m/find-first #(= x (second %)) (drop 1 (m/indexed (iterate f x))))))
+
+(defn bits [number]
+  (->> number
+       (iterate #(bit-shift-right % 1))
+       (take-while pos?)
+       (reverse)
+       (map #(bit-and 0x01 %))))
+
+(defn- powed-bases [max-exp pow-fn base]
+  (loop [result [base]
+         current-exp 1]
+    (if (= current-exp max-exp)
+      result
+      (recur (conj result (pow-fn (last result) (last result)))
+             (inc current-exp)))))
+
+(defn fast-pow
+  "Pow using binary notation of the expontent. with pow-fn a^2 = (pow-fn a a)"
+  [pow-fn base exponent]
+  (let [bits (vec (bits exponent))
+        max-exp (count bits)
+        bases (vec (reverse (powed-bases max-exp pow-fn base)))]
+    (reduce (fn [result i]
+              (if (zero? (bits i))
+                result
+                (pow-fn result (bases i))))
+            (first bases)
+            (range 1 max-exp))))
+
 
 (defn between [i1 i2]
   (+ i1 (quot (- i2 i1) 2)))
@@ -78,3 +112,12 @@
   (if (< n 10)
     [n]
     (conj (digits (quot n 10)) (rem n 10))))
+
+(defn extgcd [a b]
+  (if (zero? b)
+    [a 1 0]
+    (let [[g u v] (extgcd b (mod a b))]
+      [g v (- u (* (quot a b) v))])))
+
+(defn modinv [a m]
+  (mod (second (extgcd a m)) m))

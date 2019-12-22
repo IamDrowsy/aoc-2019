@@ -11,36 +11,42 @@
 (defn last-number [s]
   (parse-long (last(str/split s #"\s"))))
 
-(defn deal-into-new [cards# index]
-  (mod (- (inc index)) cards#))
+;a*i+b
+(defn comp-step [cards# [a b] [a' b']]
+  [(mod (* a a') cards#) (mod (+ (* a' b) b') cards#)])
 
-(defn cut [cards# cut# index]
-  (mod (+ index cut#) cards#))
-
-(defn deal-with-inc [cards# inc# index]
-  (mod (* index inc#) cards#))
-
-(defn parse-line [card# line]
+(defn parse-line [card# reverse? line]
   (cond (str/starts-with? line "deal into")
-        (partial deal-into-new card#)
+        [-1 -1]
         (str/starts-with? line "deal with")
-        (partial deal-with-inc card# (last-number line))
+        (if reverse?
+          [(bigint (u/modinv (last-number line) card#)) 0]
+          [(last-number line) 0])
         (str/starts-with? line "cut")
-        (partial cut card# (- (last-number line)))))
+        (if reverse?
+          [1 (last-number line)]
+          [1 (- (last-number line))])))
 
-(defn parse-input [^long card# input]
-  (reduce comp (mapv (partial parse-line card#) (reverse (str/split-lines input)))))
+(defn apply-step [cards# [a b] index]
+  (mod (+ (* a index) b) cards#))
+
+(defn parse-input [^long card# reverse? input]
+  (let [reverse-fn (if reverse? reverse identity)]
+    (->> (str/split-lines input)
+         (mapv (partial parse-line card# reverse?))
+         reverse-fn
+         (reduce (partial comp-step card#)))))
 
 (defn solve-1 [input]
-  ((parse-input 10007 input) 2019))
-
-(defn step [])
+  (apply-step 10007 (parse-input 10007 false input) 2019))
 
 (defn solve-2 [input]
-  (let [shuffle-fn (parse-input 119315717514047 input)
-        step (shuffle-fn 2020)]
-    (u/first-repetition shuffle-fn 2020)))
-
+  (let [cards# 119315717514047N
+        step (parse-input cards# true input)]
+    (long (apply-step cards# (u/fast-pow (partial comp-step cards#)
+                                         step
+                                         101741582076661)
+                      2020N))))
 
 (defn run []
   (check day 1 (solve-1 (get-input day)))
