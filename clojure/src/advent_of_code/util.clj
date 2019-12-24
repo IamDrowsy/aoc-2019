@@ -126,3 +126,10 @@
 
 (defn modinv [a m]
   (mod (second (extgcd a m)) m))
+
+(defn iterate-indexed
+  "Like iterate but f takes the index and the previous value"
+  [f x]
+  (map second (iterate (fn [[i x]]
+                         [(inc i) (f i x)])
+                       [0 x])))

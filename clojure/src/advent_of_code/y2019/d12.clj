@@ -3,12 +3,12 @@
     [advent-of-code.util :refer [parse-long get-input check]]
     [criterium.core :refer [quick-bench]]
     [clojure.string :as str]
-    [medley.core :refer [map-vals]]))
+    [medley.core :refer [map-vals]]
+    [advent-of-code.util :as u]
+    [fastmath.core :as fm]
+    [medley.core :as m]))
 
 (def day 12)
-
-(set! *unchecked-math* :warn-on-boxed)
-(set! *warn-on-reflection* true)
 
 (defn parse-moon [moon]
   (let [parsed (re-matches #"<x=([^,]+), y=([^,]+), z=([^,]+)>" moon)]
@@ -16,8 +16,7 @@
      :vx 0 :vy 0 :vz 0}))
 
 (defn parse-input [input]
-  {:moons (mapv parse-moon (str/split-lines input))
-   :step 0})
+  {:moons (mapv parse-moon (str/split-lines input))})
 
 (defn apply-gravity-for-dimension [me they dim vdim]
   (let [^long my-x (dim me) ^long their-x (dim they)]
@@ -41,10 +40,22 @@
        (mapv #(apply-gravity % moons))
        (mapv move)))
 
-(defn step [universe]
+(defn detect-cycle [index universe ckw vkw]
+  (if (and (not (ckw universe))
+           (every? zero? (map vkw (:moons universe))))
+    (assoc universe ckw (inc index))
+    universe))
+
+(defn detect-cycles [index universe]
+  (reduce (fn [u [ckw vkw]]
+            (detect-cycle index u ckw vkw))
+          universe
+          [[:cx :vx] [:cy :vy] [:cz :vz]]))
+
+(defn step [index universe]
   (-> universe
       (update :moons step-moons)
-      (update :step inc)))
+      ((partial detect-cycles index))))
 
 (defn total-energy [universe]
   (reduce (fn [^long sum {:keys [^long x ^long y ^long z ^long vx ^long vy ^long vz]}]
@@ -55,11 +66,16 @@
           universe))
 
 (defn solve-1 [input]
-  (total-energy (:moons (nth (iterate step (parse-input input)) 1000))))
+  (total-energy (:moons (nth (u/iterate-indexed step (parse-input input)) 1000))))
+
+(defn found-all-cycles? [{:keys [cx cy cz]}]
+  (and cx cy cz))
+
+(defn full-cycle [{:keys [cx cy cz]}]
+  (reduce fm/lcm [cx cy cz]))
 
 (defn solve-2 [input]
-  (let [starting (parse-input input)]
-    (:step (first (drop-while #(not= (:moons %) (:moons starting)) (drop 1 (iterate step starting)))))))
+    (* 2 (full-cycle (m/find-first found-all-cycles? (u/iterate-indexed step (parse-input input))))))
 
 (defn run []
   (check day 1 (solve-1 (get-input day)))
