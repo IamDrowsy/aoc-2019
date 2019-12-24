@@ -18,7 +18,7 @@
   (let [input-file (format "../data/d%02d-input.txt" day)]
     (if (.exists (File. input-file))
       (slurp input-file)
-      (let [input (str/trim (get-input-from-aoc day))]
+      (let [input (str/trim-newline (get-input-from-aoc day))]
         (spit input-file input)
         input))))
 
@@ -32,10 +32,6 @@
   "Calculates the fixed point of f with respect to x."
   (reduce #(if (= %1 %2) (reduced %1) %2)
           (iterate f x)))
-
-(defn first-repetition [f x]
-  "Finds the index of (iterate f x) where f^i(x) = x"
-  (first (m/find-first #(= x (second %)) (drop 1 (m/indexed (iterate f x))))))
 
 (defn bits [number]
   (->> number
@@ -74,11 +70,20 @@
     (let [result (target-fn (f i))]
       (cond
         ;linear search case
-        (and lti hfi (> 10 (- lti hfi))) (first (drop-while #(not (target-fn (f %))) (range hfi (inc lti))))
-        (and (not result) (nil? lti)) (recur i lti (* 2 i))
-        (and result (nil? hfi)) (recur hfi i (quot i 2))
-        (not result) (recur i lti (between i lti))
-        result (recur hfi i (between hfi i))))))
+        (and lti hfi (> 10 (- lti hfi)))
+        (first (drop-while #(not (target-fn (f %))) (range hfi (inc lti))))
+
+        (and (not result) (nil? lti))
+        (recur i lti (* 2 i))
+
+        (and result (nil? hfi))
+        (recur hfi i (quot i 2))
+
+        (not result)
+        (recur i lti (between i lti))
+
+        result
+        (recur hfi i (between hfi i))))))
 
 (defn binary-search
   "Finds the first index for that (target-fn (f index)) is true. Binary searches with the index"

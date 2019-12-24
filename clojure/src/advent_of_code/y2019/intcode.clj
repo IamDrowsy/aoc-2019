@@ -53,6 +53,7 @@
   IntcodeIO
   (read-input! [this]
     #_(println "Read Input")
+    (>!! (get-in this [:io :request]) :request-input)
     (<!! (get-in this [:io :input])))
   (write-output [this val]
     #_(println "Write" val "to output")
@@ -88,7 +89,7 @@
   {1  {:args [:get :get :set]
        :fn   (fn [i [g1 g2 s1]] (s1 i (+ (g1 i) (g2 i))))}
    2  {:args [:get :get :set]
-       :fn   (fn [i [g1 g2 s1]] (s1 i (* (g1 i) (g2 i))))}
+       :fn   (fn [i [g1 g2 s1]] (s1 i (* (bigint (g1 i)) (bigint (g2 i)))))}
    3  {:args [:set]
        :fn   (fn [i [s]] (let [input (read-input! i)]
                            (if (nil? input)
@@ -157,17 +158,19 @@
    (resume intcode input (chan 20)))
   ([intcode input out-chan]
    (let [in-chan (if (coll? input) (to-chan input) input)
+         request-chan (chan (a/dropping-buffer 1))
          state (atom (merge intcode {:io {:input  in-chan
-                                          :output out-chan}}))]
+                                          :output out-chan
+                                          :request request-chan}}))]
      (thread
        (try
          (loop [intcode @state]
            (reset! state intcode)
            (if (= -1 (get-pointer intcode))
-             (do (close! out-chan) (close! in-chan))
+             (do (close! out-chan) (close! in-chan) (close! request-chan))
              (recur (step intcode))))
          (catch Exception e
-           (close! in-chan) (close! out-chan)
+           (close! in-chan) (close! out-chan) (close! request-chan)
            (throw e))))
      state)))
 
@@ -181,8 +184,17 @@
             :relative-base 0
             :pointer 0} input out-chan)))
 
+(defn get-outchan [started-intcode]
+  (get-in @started-intcode [:io :output]))
+
+(defn get-inchan [started-intcode]
+  (get-in @started-intcode [:io :input]))
+
+(defn get-requestchan [started-intcode]
+  (get-in @started-intcode [:io :request]))
+
 (defn next-output! [started-intcode]
-  (<!! (get-in @started-intcode [:io :output])))
+  (<!! (get-outchan started-intcode)))
 
 (defn drain [started-intcode]
   (drain-until-closed (get-in @started-intcode [:io :output])))
@@ -192,5 +204,5 @@
   (drain started-intcode))
 
 (defn input! [started-intcode val]
-  (>!! (get-in @started-intcode [:io :input]) val))
+  (>!! (get-inchan started-intcode) val))
 
