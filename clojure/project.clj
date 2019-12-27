@@ -21,4 +21,5 @@
                  [net.mikera/vectorz-clj "0.48.0"]
                  [funcool/cuerdas "2.2.1"]
                  [clatrix "0.5.0"]
+                 [meander/epsilon "0.0.331"]
                  [org.clojure/core.async "0.6.532"]])
